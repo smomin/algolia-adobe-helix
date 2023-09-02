@@ -5,37 +5,48 @@ export default function decorate(block) {
   const { algoliasearch } = window;
   const { autocomplete, getAlgoliaResults } = window['@algolia/autocomplete-js'];
 
-  const searchClient = algoliasearch(
-    'latency',
-    '6be0576ff61c053d5f9a3225e2a90f76',
-  );
+  fetch('/config/algolia.json')
+    .then(async (response) => {
+      const { data } = await response.json();
+      const config = new Map(data.map((obj) => [obj.name, obj.value]));
+      const searchClient = algoliasearch(
+        config.get('appId'),
+        config.get('searchApiKey'),
+      );
 
-  autocomplete({
-    container: block,
-    placeholder: 'Search for products',
-    getSources({ query }) {
-      return [
-        {
-          sourceId: 'products',
-          getItems() {
-            return getAlgoliaResults({
-              searchClient,
-              queries: [
-                {
-                  indexName: 'instant_search',
-                  query,
-                  params: {
-                    hitsPerPage: 5,
-                    attributesToSnippet: ['name:10', 'description:35'],
-                    snippetEllipsisText: '…',
-                  },
-                },
-              ],
-            });
-          },
-          templates: {
-            item({ item, components, html }) {
-              return html`
+      autocomplete({
+        container: block,
+        placeholder: config.get('placeholder'),
+        onSubmit({ state }) {
+          window.location.href = `${config.get('resultUrl')}?query=${state.query}&queryID=${state.context.queryID}`;
+        },
+        getSources({ query }) {
+          return [
+            {
+              sourceId: 'products',
+              getItems() {
+                return getAlgoliaResults({
+                  searchClient,
+                  queries: [
+                    {
+                      indexName: config.get('indexName'),
+                      clickAnalytics: true,
+                      query,
+                      params: {
+                        hitsPerPage: 5,
+                        attributesToSnippet: [
+                          'name:10',
+                          'description:35',
+                        ],
+                        snippetEllipsisText: '…',
+                      },
+                    },
+                  ],
+                });
+              },
+              templates: {
+                item({ item, components, html }) {
+                  return html`
                 <div class="aa-ItemWrapper">
               <div class="aa-ItemContent">
                 <div class="aa-ItemIcon aa-ItemIcon--alignTop">
@@ -97,10 +108,11 @@ export default function decorate(block) {
               </div>
             </div>
               `;
+                },
+              },
             },
-          },
+          ];
         },
-      ];
-    },
-  });
+      });
+    });
 }

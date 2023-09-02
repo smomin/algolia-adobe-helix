@@ -11,6 +11,8 @@ import {
   waitForLCP,
   loadBlocks,
   loadCSS,
+  decorateBlock,
+  loadBlock,
 } from './lib-franklin.js';
 
 const LCP_BLOCKS = []; // add your LCP blocks to the list
@@ -40,6 +42,18 @@ async function loadFonts() {
   } catch (e) {
     // do nothing
   }
+}
+
+/**
+ * Loads a block named 'header' into header
+ * @returns {Promise}
+ * @param autocomplete
+ */
+async function loadAutocomplete(autocomplete) {
+  const autocompleteBlock = buildBlock('autocomplete', '');
+  autocomplete.append(autocompleteBlock);
+  decorateBlock(autocompleteBlock);
+  return loadBlock(autocompleteBlock);
 }
 
 /**
@@ -105,9 +119,11 @@ async function loadLazy(doc) {
   const element = hash ? doc.getElementById(hash.substring(1)) : false;
   if (hash && element) element.scrollIntoView();
 
-  loadHeader(doc.querySelector('header'));
+  const header = loadHeader(doc.querySelector('header'));
+  header.then(() => {
+    loadAutocomplete(doc.querySelector('.autocomplete'));
+  });
   loadFooter(doc.querySelector('footer'));
-
   loadCSS(`${window.hlx.codeBasePath}/styles/lazy-styles.css`);
   loadFonts();
 
